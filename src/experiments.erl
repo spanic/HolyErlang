@@ -12,7 +12,7 @@
 fibonacci(X) when X > 0, is_integer(X) ->
     iterate(X, 1, 0, 1);
 fibonacci(_) ->
-    io:format("Incorrent argument~n").
+    io:format("Incorrect argument~n").
 
 iterate(X, Counter, Previous, Total) ->
     if
@@ -23,9 +23,9 @@ iterate(X, Counter, Previous, Total) ->
 factorial(N) when N >= 0, is_integer(N)  ->
     nth_factorial(N, 1);
 factorial(_) ->
-    io:format("Incorrent argument~n").
+    io:format("Incorrect argument~n").
 
-nth_factorial(N, Accumulator) when N =:= 0; N =:= 1 ->
+nth_factorial(N, Accumulator) when N =:= 0 ->
     Accumulator;
 nth_factorial(N, Accumulator) ->
     nth_factorial(N - 1, Accumulator * N).
