@@ -7,33 +7,8 @@
 
 ### Task №2 (since 05.10) — Erlang Basics
 
-* **07.10** | Added solutions for ex. 1.5 (some tasks had been implemented in a several different ways):
-    * **Cartesian join** of two lists;
-    ```
-    c(homework).
-    
-    homework:cartesian([A], [B]).
-    ```
-    * **List flattening** (i. e. «unpacking» inner elements);
-    ```
-    homework:flatten(List).
-    ```
-    * **Creating a list of «tags»** from the source list containing maps like `#{tags => [...]}`;
-    ```
-    homework:get_tags(List).
-    ```
-    * **Getting all tuples** from the input list;
-    ```
-    homework:get_tuples(List).
-    ```
-    * **Getting all rectangles** that has area **lower than N** from the list like `Shapes = [{{0, 0}, {10, 10}}, ...]`;
-    ```
-    homework:validate_areas(Shapes).
-    ```
-    * **Serializing & deserializing** previously mentioned list of rectangles to/from the binary format;
-    ```
-    serialize_shapes(Shapes).
-    
-    deserialize_shapes(BinaryShapes).
-    ```
+* **07.10** | Added solutions for **ex. 1.5** (some tasks had been implemented in a several different ways), try 
+`c(homework), homework:module_info().`;
+* **08.10** | Added solutions for **ex. 1.6** and **1.7** (except the last two tasks about DNA), see `boolean` and 
+`experiments` modules.
     
