@@ -10,7 +10,7 @@
 
 %% API
 -export([fibonacci/1, factorial/1, create/1, reverse_create/1, print_list/1, print_odd_list/1,
-    filter_elements/2, reverse/1, concatenate/1]).
+    filter_elements/2, reverse/1, concatenate/1, complimentary/1]).
 
 fibonacci(X) when X > 0, is_integer(X) ->
     iterate(X, 1, 0, 1);
@@ -88,4 +88,14 @@ rec_reverse([], Accumulator) -> Accumulator.
 %% Function that flattens source list
 concatenate(List) when is_list(List) ->
     homework:flatten(List); %% implementation is absolutely the same (+ for the next task too)
-concatenate(_) -> ?incorrect_argument_alert.
+concatenate(_) -> ?incorrect_argument_alert().
+
+%% Transcripts DNA-like list/string
+complimentary(List) when is_list(List) ->
+    rec_transcript(List, []);
+complimentary(_) -> ?incorrect_argument_alert().
+
+rec_transcript([H|T], Accumulator) ->
+    Element = if is_integer(H) -> list_to_atom(string:lowercase([H])); true -> H end,
+    rec_transcript(T, Accumulator ++ [maps:get(Element, #{a => u, g => c, c => g, t => a}, '_')]);
+rec_transcript([], Accumulator) -> Accumulator.
