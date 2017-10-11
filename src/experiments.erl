@@ -9,8 +9,7 @@
 -define(incorrect_argument_alert(), io:fwrite("Incorrect argument(s)!~n")).
 
 %% API
--export([fibonacci/1, factorial/1, create/1, reverse_create/1, print_list/1, print_odd_list/1,
-    filter_elements/2, reverse/1, concatenate/1, complimentary/1, cut_sequence/2]).
+-export([fibonacci/1, factorial/1, exec_operation/3, map_via_foldl/2, filter_via_foldl/2]).
 
 fibonacci(X) when X > 0, is_integer(X) ->
     iterate(X, 1, 0, 1);
@@ -31,96 +30,29 @@ nth_factorial(N, Accumulator) when N =:= 0 ->
 nth_factorial(N, Accumulator) ->
     nth_factorial(N - 1, Accumulator * N).
 
-%% Function that creates a list with the length equal to N of sequential natural numbers starts from 1
-create(N) when is_integer(N) ->
-    rec_add(0, N, []);
-create(_) -> ?incorrect_argument_alert().
+%% Function that executes specified binary operation (like +, - or anything else) on the each pair of elements from
+%% the two source lists. Try to define your own operation like:
+%%     your_operation() -> fun(X, Y) -> ... end.
+%%     exec_operation(your_operation(), List1, List2).
+%% or use Erlang's own BIFs:
+%%     exec_operation(erlang:'+'/2, [1, 2, 3], [4, 5, 6]). >>> [5, 7, 9]
+exec_operation(Function, List1, List2) ->
+    rec_execute(Function, List1, List2, []).
 
-rec_add(X, N, Accumulator) ->
-    if
-        X < N ->
-            Increment = fun() -> X + 1 end, %% Used closure just to try it
-            rec_add(Increment(), N, Accumulator ++ [Increment()]);
-        true -> Accumulator
-    end.
+rec_execute(Func, [H1|T1], [H2|T2], Accumulator) ->
+    rec_execute(Func, T1, T2, Accumulator ++ [Func(H1, H2)]);
+rec_execute(_, [], [], Accumulator) -> Accumulator.
 
-%% Function that creates a list of sequential descending natural numbers from N to 1
-reverse_create(N) when is_integer(N) ->
-    reverse_rec_add(N, []);
-reverse_create(_) -> ?incorrect_argument_alert().
+%% Implementation of lists:map/2 via lists:foldl/3. Mapping operation can be specified as shown above.
+map_via_foldl(Function, List) when is_function(Function), is_list(List) ->
+    lists:foldl(fun(Element, Accumulator) -> Accumulator ++ [Function(Element)] end, [], List);
+map_via_foldl(_, _) -> ?incorrect_argument_alert().
 
-reverse_rec_add(0, Accumulator) -> Accumulator;
-reverse_rec_add(N, Accumulator) ->
-    reverse_rec_add(N - 1, Accumulator ++ [N]).
-
-%% Function that prints every element from the list like create(N) returns
-print_list(N) when is_integer(N) ->
-    [X || X <- create(N), io:fwrite("~p~n", [X]) =:= ok], done;
-print_list(_) -> ?incorrect_argument_alert().
-
-%% Function that works similar to the previous one, but prints only odd elements
-print_odd_list(N) when is_integer(N) ->
-    [X || X <- create(N), (X rem 2 =:= 1) andalso (io:fwrite("~p~n", [X]) =:= ok)], done;
-print_odd_list(_) -> ?incorrect_argument_alert().
-
-%% Function that creates a list from another one with elements lower or equal than/to N
-filter_elements([H|T], N) when is_integer(N) ->
-    %% [X || X <- [H|T], X =< N]. %% using LC is the easiest solution here
-    rec_filter([H|T], N, []);
-filter_elements([], _) -> [];
-filter_elements(_, _) -> ?incorrect_argument_alert().
-
-rec_filter([H|T], N, Accumulator) when H =< N ->
-    rec_filter(T, N, Accumulator ++ [H]); %% also can be done with "if" or "case" clauses, doesn't matter at all
-rec_filter([_|T], N, Accumulator) -> rec_filter(T, N, Accumulator);
-rec_filter([], _, Accumulator) -> Accumulator.
-
-%% Function that does source list permutation
-reverse([H|T]) ->
-    rec_reverse([H|T], []);
-reverse([]) -> [];
-reverse(_) -> ?incorrect_argument_alert().
-
-rec_reverse([H|T], Accumulator) ->
-    rec_reverse(T, [H] ++ Accumulator);
-rec_reverse([], Accumulator) -> Accumulator.
-
-%% Function that flattens source list
-concatenate(List) when is_list(List) ->
-    homework:flatten(List); %% implementation is absolutely the same (+ for the next task too)
-concatenate(_) -> ?incorrect_argument_alert().
-
-%% Transcripts DNA-like list/string
-complimentary(List) when is_list(List) ->
-    rec_transcript(List, []);
-complimentary(_) -> ?incorrect_argument_alert().
-
-rec_transcript([H|T], Accumulator) ->
-    Element = if is_integer(H) -> list_to_atom(string:lowercase([H])); true -> H end,
-    rec_transcript(T, Accumulator ++ [maps:get(Element, #{a => u, g => c, c => g, t => a}, '_')]);
-rec_transcript([], Accumulator) -> Accumulator.
-
-%% Cuts all specified subsequences from the source list. Looks terrible, but works properly.
-cut_sequence(Source, Substring) when is_list(Source) andalso is_list(Substring) ->
-    %% lists:subtract(Source, Substring).
-    rec_cut_sequence(Source, Substring, []);
-cut_sequence(_, _) -> ?incorrect_argument_alert().
-
-rec_cut_sequence([H1|T1], [H2|T2], Accumulator) ->
-    Comparison_result = rec_compare_sequence([H1|T1], [H2|T2]),
-    if
-        Comparison_result -> rec_cut_sequence(
-            lists:nthtail(length([H2|T2]), [H1|T1]),
-            [H2|T2], Accumulator
-        );
-        true -> rec_cut_sequence(T1, [H2|T2], Accumulator ++ [H1])
-    end;
-rec_cut_sequence(_, _, Accumulator) -> Accumulator.
-
-rec_compare_sequence([H1|T1], [H2|T2]) ->
-    if
-        H1 =:= H2 -> rec_compare_sequence(T1, T2);
-        true -> false
-    end;
-rec_compare_sequence([], [_|_]) -> false;
-rec_compare_sequence(_, []) -> true.
+%% Implementation of lists:filter/2 via lists:foldl/3. Function declaration way is still the same.
+filter_via_foldl(Function, List) when is_function(Function), is_list(List) ->
+    lists:foldl(
+        fun(Element, Accumulator) -> case Function(Element) of
+            true -> Accumulator ++ [Element];
+            false -> Accumulator
+        end end, [], List);
+filter_via_foldl(_, _) -> ?incorrect_argument_alert().

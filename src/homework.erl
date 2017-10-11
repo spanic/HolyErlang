@@ -7,11 +7,15 @@
 -author("Andrei Sadulin").
 
 %% API
--export([cartesian/2, flatten/1, get_tags/1, get_tuples/1, validate_areas/2, serialize_shapes/1, deserialize_shapes/1]).
+-export([cartesian/2, flatten/1, get_tags/1, get_tuples/1, validate_areas/2, serialize_shapes/1, deserialize_shapes/1,
+    create/1, reverse_create/1, print_list/1, print_odd_list/1, filter_elements/2, reverse/1, concatenate/1,
+    complimentary/1, cut_sequence/2]).
 
-%% -------------------
-%% List Comprehensions
-%% -------------------
+-define(incorrect_argument_alert(), io:fwrite("Incorrect argument(s)!~n")).
+
+%% ------------------------------
+%% List and Binary Comprehensions
+%% ------------------------------
 
 %% LC that does Cartesian multiplication of two lists
 cartesian(A, B) when is_list(A) andalso is_list(B) ->
@@ -75,3 +79,101 @@ serialize_shapes(_) -> io:fwrite("Argument must be a list!~n").
 deserialize_shapes(BinaryShapes) when is_binary(BinaryShapes) ->
     [{{X1, Y1}, {X2, Y2}} || <<X1:8, Y1:8, X2:8, Y2:8>> <= BinaryShapes];
 deserialize_shapes(_) -> io:fwrite("Argument must be binary!~n").
+
+%% ----------------------------
+%% Lists and related operations
+%% ----------------------------
+
+%% Function that creates a list with the length equal to N of sequential natural numbers starts from 1
+create(N) when is_integer(N) ->
+    rec_add(0, N, []);
+create(_) -> ?incorrect_argument_alert().
+
+rec_add(X, N, Accumulator) ->
+    if
+        X < N ->
+            Increment = fun() -> X + 1 end, %% Used closure just to try it
+            rec_add(Increment(), N, Accumulator ++ [Increment()]);
+        true -> Accumulator
+    end.
+
+%% Function that creates a list of sequential descending natural numbers from N to 1
+reverse_create(N) when is_integer(N) ->
+    reverse_rec_add(N, []);
+reverse_create(_) -> ?incorrect_argument_alert().
+
+reverse_rec_add(0, Accumulator) -> Accumulator;
+reverse_rec_add(N, Accumulator) ->
+    reverse_rec_add(N - 1, Accumulator ++ [N]).
+
+%% Function that prints every element from the list like create(N) returns
+print_list(N) when is_integer(N) ->
+    [X || X <- create(N), io:fwrite("~p~n", [X]) =:= ok], done;
+print_list(_) -> ?incorrect_argument_alert().
+
+%% Function that works similar to the previous one, but prints only odd elements
+print_odd_list(N) when is_integer(N) ->
+    [X || X <- create(N), (X rem 2 =:= 1) andalso (io:fwrite("~p~n", [X]) =:= ok)], done;
+print_odd_list(_) -> ?incorrect_argument_alert().
+
+%% Function that creates a list from another one with elements lower or equal than/to N
+filter_elements([H|T], N) when is_integer(N) ->
+    %% [X || X <- [H|T], X =< N]. %% using LC is the easiest solution here
+    rec_filter([H|T], N, []);
+filter_elements([], _) -> [];
+filter_elements(_, _) -> ?incorrect_argument_alert().
+
+rec_filter([H|T], N, Accumulator) when H =< N ->
+    rec_filter(T, N, Accumulator ++ [H]); %% also can be done with "if" or "case" clauses, doesn't matter at all
+rec_filter([_|T], N, Accumulator) -> rec_filter(T, N, Accumulator);
+rec_filter([], _, Accumulator) -> Accumulator.
+
+%% Function that does source list permutation
+reverse([H|T]) ->
+    rec_reverse([H|T], []);
+reverse([]) -> [];
+reverse(_) -> ?incorrect_argument_alert().
+
+rec_reverse([H|T], Accumulator) ->
+    rec_reverse(T, [H] ++ Accumulator);
+rec_reverse([], Accumulator) -> Accumulator.
+
+%% Function that flattens source list
+concatenate(List) when is_list(List) ->
+    homework:flatten(List); %% implementation is absolutely the same (+ for the next task too)
+concatenate(_) -> ?incorrect_argument_alert().
+
+%% Transcripts DNA-like list/string
+complimentary(List) when is_list(List) ->
+    rec_transcript(List, []);
+complimentary(_) -> ?incorrect_argument_alert().
+
+rec_transcript([H|T], Accumulator) ->
+    Element = if is_integer(H) -> list_to_atom(string:lowercase([H])); true -> H end,
+    rec_transcript(T, Accumulator ++ [maps:get(Element, #{a => u, g => c, c => g, t => a}, '_')]);
+rec_transcript([], Accumulator) -> Accumulator.
+
+%% Cuts all specified subsequences from the source list. Looks terrible, but works properly.
+cut_sequence(Source, Substring) when is_list(Source) andalso is_list(Substring) ->
+    %% lists:subtract(Source, Substring).
+    rec_cut_sequence(Source, Substring, []);
+cut_sequence(_, _) -> ?incorrect_argument_alert().
+
+rec_cut_sequence([H1|T1], [H2|T2], Accumulator) ->
+    Comparison_result = rec_compare_sequence([H1|T1], [H2|T2]),
+    if
+        Comparison_result -> rec_cut_sequence(
+            lists:nthtail(length([H2|T2]), [H1|T1]),
+            [H2|T2], Accumulator
+        );
+        true -> rec_cut_sequence(T1, [H2|T2], Accumulator ++ [H1])
+    end;
+rec_cut_sequence(_, _, Accumulator) -> Accumulator.
+
+rec_compare_sequence([H1|T1], [H2|T2]) ->
+    if
+        H1 =:= H2 -> rec_compare_sequence(T1, T2);
+        true -> false
+    end;
+rec_compare_sequence([], [_|_]) -> false;
+rec_compare_sequence(_, []) -> true.
