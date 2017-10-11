@@ -10,7 +10,7 @@
 
 %% API
 -export([fibonacci/1, factorial/1, create/1, reverse_create/1, print_list/1, print_odd_list/1,
-    filter_elements/2, reverse/1, concatenate/1, complimentary/1]).
+    filter_elements/2, reverse/1, concatenate/1, complimentary/1, cut_sequence/2]).
 
 fibonacci(X) when X > 0, is_integer(X) ->
     iterate(X, 1, 0, 1);
@@ -99,3 +99,28 @@ rec_transcript([H|T], Accumulator) ->
     Element = if is_integer(H) -> list_to_atom(string:lowercase([H])); true -> H end,
     rec_transcript(T, Accumulator ++ [maps:get(Element, #{a => u, g => c, c => g, t => a}, '_')]);
 rec_transcript([], Accumulator) -> Accumulator.
+
+%% Cuts all specified subsequences from the source list. Looks terrible, but works properly.
+cut_sequence(Source, Substring) when is_list(Source) andalso is_list(Substring) ->
+    %% lists:subtract(Source, Substring).
+    rec_cut_sequence(Source, Substring, []);
+cut_sequence(_, _) -> ?incorrect_argument_alert().
+
+rec_cut_sequence([H1|T1], [H2|T2], Accumulator) ->
+    Comparison_result = rec_compare_sequence([H1|T1], [H2|T2]),
+    if
+        Comparison_result -> rec_cut_sequence(
+            lists:nthtail(length([H2|T2]), [H1|T1]),
+            [H2|T2], Accumulator
+        );
+        true -> rec_cut_sequence(T1, [H2|T2], Accumulator ++ [H1])
+    end;
+rec_cut_sequence(_, _, Accumulator) -> Accumulator.
+
+rec_compare_sequence([H1|T1], [H2|T2]) ->
+    if
+        H1 =:= H2 -> rec_compare_sequence(T1, T2);
+        true -> false
+    end;
+rec_compare_sequence([], [_|_]) -> false;
+rec_compare_sequence(_, []) -> true.
