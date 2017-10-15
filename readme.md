@@ -12,7 +12,8 @@
 * **08.10** | Added solutions for **ex. 1.6** and **1.7** (except the last two tasks about DNA), see `boolean` and 
 `homework` modules;
 * **10.10** | Solved **first** task about DNA processing from **ex. 1.7**;
-* **11.10** | Completed the **last task** from **1.7** (both of them were added to `homework` module).
+* **11.10** | Completed the **last task** from **1.7** (both of them were added to `homework` module);
+* **15.10** | Added solution for **ex. 1.8** (with additional values validation) (see `json` module)
    
 ### Task №3 (since 10.10) — Functional programming techniques
 
