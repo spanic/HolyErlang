@@ -7,7 +7,7 @@
 -author("Andrei Sadulin").
 
 %% API
--export([]).
+-export([new/1, read/2, write/3, validate_value/1]).
 
 -define(incorrect_argument_alert(), io:fwrite("Incorrect argument(s)!~n")).
 -define(error, {error, not_found}).
@@ -77,5 +77,3 @@ rec_validate_value([H|T]) ->
             false -> throw(incorrect_value)
         end;
 rec_validate_value([]) -> true.
-
--compile(export_all).
