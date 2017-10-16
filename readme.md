@@ -15,9 +15,13 @@
 * **11.10** | Completed the **last task** from **1.7** (both of them were added to `homework` module);
 * **15.10** | Added solution for **ex. 1.8** (with additional values validation) (see `json` module)
    
-### Task №3 (since 10.10) — Functional programming techniques
+### Task №3 (since 10.10) — Functional Programming Techniques
 
 * **11.10** | Added `lists:map/2` and `lists:filter/2` implementations via `lists:foldl/3` function (see `experiments` 
 module)
+
+### Task №4 (since 12.10) — BIFs and Libraries Overview
+
+* **16.10** | Implemented operations with files as a preparation for **ex. 2.0** (see `database` module)
 
 _Work in progress..._
