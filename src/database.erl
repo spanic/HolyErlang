@@ -7,7 +7,7 @@
 -author("Andrei Sadulin").
 
 %% API
--export([new/0, destroy/0, write/3, delete/2, read/2]).
+-export([new/0, destroy/1, write/3, delete/2, read/2, match/2, commit/1]).
 
 -define(Path, "../resources/").
 -define(FileName, "database.txt").
@@ -19,36 +19,42 @@
 
 new() ->
     file:make_dir(?Path),
-    OpeningResult = file:open(?Path ++ ?FileName, [read, ?Encoding]),
-    case OpeningResult of
-        {error, enoent} ->
-            create_new_file(?Path, ?FileName, ?Encoding);
-        {ok, Stream} -> file:close(Stream),
-            case rec_ask_user("Looks like database already exists on your PC, " ++
+    case get_file_stream([read]) of
+        enoent -> [];
+        ReadStream ->
+            BaseStream = case rec_ask_user_yes_no("Looks like database already exists on your PC, " ++
                     "do you want to overwrite it? [yes/no]~n") of
-                yes -> create_new_file(?Path, ?FileName, ?Encoding);
-                no -> io:fwrite("Using existing database, see \"~s\"~n", [?Path ++ ?FileName])
-            end;
-        _ -> io:fwrite("Unexpected error occured!~n")
+                yes ->
+                    file:close(ReadStream),
+                    HelperStream = get_file_stream([write, read]),
+                    file:truncate(HelperStream), HelperStream;
+                no ->
+                    io:fwrite("Using existing database, see \"~s\"~n", [?Path ++ ?FileName]), ReadStream
+            end,
+            rec_get_lines(BaseStream, [])
     end.
 
-create_new_file(Path, FileName, Encoding) ->
-    {ok, Stream} = file:open(Path ++ FileName, [write, Encoding]),
-    file:close(Stream).
+rec_get_lines(Stream, Accumulator) ->
+     case io:read(Stream, '') of
+         eof -> file:close(Stream), Accumulator;
+         {ok, Term} -> rec_get_lines(Stream, Accumulator ++ [Term])
+     end.
 
-rec_ask_user(Message) ->
+get_file_stream(Modes) when is_list(Modes) ->
+    {_, Result} = file:open(?Path ++ ?FileName, Modes ++ [?Encoding]), Result;
+get_file_stream(_) -> throw("File open modes should be a list!").
+
+rec_ask_user_yes_no(Message) ->
     io:fwrite(Message), case io:read("> ") of
-        {ok, Answer} when Answer =/= yes andalso Answer =/= no -> rec_ask_user(Message);
+        {ok, Answer} when Answer =/= yes andalso Answer =/= no -> rec_ask_user_yes_no(Message);
         {ok, YesOrNo} -> YesOrNo
     end.
-
-%% TODO: maybe use lambda?
 
 write(Key, Value, DB) when is_list(DB) -> 
     write_ext(rec_is_key_exists(Key, DB), {Key, Value}, DB);
 write(_, _, DB) -> ?incorrect_argument_alert, DB.
 
-write_ext({false, _}, Entry, DB) -> DB ++ [Entry];
+write_ext(false, Entry, DB) -> DB ++ [Entry];
 write_ext(_, _, DB) -> io:fwrite("Uniqueness constraint violated!~n"), DB.
 
 delete(Key, DB) when is_list(DB) ->
@@ -65,6 +71,15 @@ read(_, DB) -> ?incorrect_argument_alert, DB.
 read_ext({true, {_, Value}}, _) -> {ok, Value};
 read_ext(_, DB) -> {error, DB}.
 
+match(Value, DB) when is_list(DB) ->
+    rec_get_key(Value, DB, []);
+match(_, _) -> ?incorrect_argument_alert.
+
+rec_get_key(Value, [{Key, Value}|T], Accumulator) ->
+    rec_get_key(Value, T, Accumulator ++ [Key]);
+rec_get_key(Value, [_|T], Accumulator) -> rec_get_key(Value, T, Accumulator);
+rec_get_key(_, [], Accumulator) -> Accumulator.
+
 rec_is_key_exists(NewKey, [{Key, Value}|T]) ->
     case NewKey =:= Key of 
         true -> {true, {Key, Value}};
@@ -72,8 +87,17 @@ rec_is_key_exists(NewKey, [{Key, Value}|T]) ->
     end;
 rec_is_key_exists(_, []) -> false.
 
-destroy() ->
-    case rec_ask_user("Do you really want to destroy your database? [yes/no]~n") of
-        yes -> file:delete(?Path ++ ?FileName), file:del_dir(?Path);
-        no -> io:fwrite("God bless your database!~n")
-    end.
+commit(DB) when is_list(DB) ->
+    rec_add_line(get_file_stream([write]), DB);
+commit(_) -> ?incorrect_argument_alert.
+
+rec_add_line(Stream, [H|T]) ->
+    io:fwrite(Stream, "~p.~n", [H]), rec_add_line(Stream, T);
+rec_add_line(Stream, []) -> file:close(Stream), ok.
+
+destroy(DB) when is_list(DB) ->
+    case rec_ask_user_yes_no("Do you really want to destroy your database? [yes/no]~n") of
+        yes -> file:delete(?Path ++ ?FileName), file:del_dir(?Path), [];
+        no -> io:fwrite("God bless your database!~n"), DB
+    end;
+destroy(_) -> ?incorrect_argument_alert.

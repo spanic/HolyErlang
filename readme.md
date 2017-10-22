@@ -22,6 +22,7 @@ module)
 
 ### Task №4 (since 12.10) — BIFs and Libraries Overview
 
-* **16.10** | Implemented operations with files as a preparation for **ex. 2.0** (see `database` module)
+* **16.10** | Implemented operations with files as a preparation for **ex. 2.0** (see `database` module);
+* **23.10** | Finished **ex. 2.0** with advanced saving DB to file functionality
 
 _Work in progress..._
