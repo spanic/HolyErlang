@@ -7,7 +7,8 @@
 -author("Andrei Sadulin").
 
 %% API
--export([new/1, destroy/1, write/3, delete/2, read/2, match/2, commit/1]).
+-export([new/1, destroy/1, write/3, delete/2, read/2, match/2, 
+    commit/1, append/3, batch_delete/2, batch_read/2]).
 
 -define(Path, "../resources/").
 -define(FileName, "database.txt").
@@ -68,7 +69,7 @@ rec_ask_user_yes_no(Message) ->
         {ok, YesOrNo} -> YesOrNo
     end.
 
-get_property(PropertyName, {Properties, _}) when is_atom(PropertyName), is_list(Properties) ->
+get_property(PropertyName, Properties) when is_atom(PropertyName), is_list(Properties) ->
     rec_get_property(PropertyName, Properties, []);
 get_property(_, _) -> throw("Invalid properties specification!").
 
@@ -79,7 +80,7 @@ rec_get_property(PropertyName, [{PropertyName, _}|_], _) ->
 rec_get_property(PropertyName, [_|T], Accumulator) ->
     rec_get_property(PropertyName, T, Accumulator);
 rec_get_property(_, [], []) -> null;
-rec_get_property(_, [], Accumulator) -> Accumulator.
+rec_get_property(_, [], Accumulator) -> hd(Accumulator).
 
 write(Key, Value, {Properties, DB}) when is_list(DB) ->
     {Properties, write_ext(rec_is_key_exists(Key, DB), {Key, Value}, DB)};
@@ -88,6 +89,12 @@ write(_, _, DB) -> ?incorrect_argument_alert, DB.
 write_ext(false, Entry, DB) -> DB ++ [Entry];
 write_ext(_, _, DB) -> io:fwrite("Uniqueness constraint violated!~n"), DB.
 
+append(Key, Value, {Properties, DB}) ->
+    {Properties, append_ext(get_property(append, Properties), Key, Value, DB)}.
+
+append_ext(allow, Key, Value, DB) -> write_ext(rec_is_key_exists(Key, DB), {Key, Value}, DB);
+append_ext(_, _, _, DB) -> io:fwrite("Appending new entries disallowed!"), DB.
+
 delete(Key, {Properties, DB}) when is_list(DB) ->
     {Properties, delete_ext(rec_is_key_exists(Key, DB), DB)};
 delete(_, DB) -> ?incorrect_argument_alert, DB.
@@ -95,12 +102,37 @@ delete(_, DB) -> ?incorrect_argument_alert, DB.
 delete_ext({true, Entry}, DB) -> DB -- [Entry];
 delete_ext(_, DB) -> io:fwrite("Integrity constraint violated!~n"), DB.
 
+batch_delete(KeyList, {Properties, DB}) when is_list(KeyList) ->
+    BatchQuantity = get_property(batch, Properties),
+    if
+        length(KeyList) > BatchQuantity; BatchQuantity =:= null, length(KeyList) > 1 -> {error, batch_limit};
+        true -> {Properties, rec_batch_delete(KeyList, DB)}
+    end.
+
+rec_batch_delete([H|T], DB) ->
+    rec_batch_delete(T, delete_ext(rec_is_key_exists(H, DB), DB));
+rec_batch_delete([], DB) -> DB.
+
 read(Key, {_, DB}) when is_list(DB) ->
     read_ext(rec_is_key_exists(Key, DB), DB);
 read(_, DB) -> ?incorrect_argument_alert, DB.
 
 read_ext({true, {_, Value}}, _) -> {ok, Value};
 read_ext(_, DB) -> {error, DB}.
+
+batch_read(KeyList, {Properties, DB}) when is_list(KeyList) ->
+    BatchQuantity = get_property(batch, Properties),
+    if
+        length(KeyList) > BatchQuantity; BatchQuantity =:= null, length(KeyList) > 1 -> {error, batch_limit};
+        true -> rec_batch_read(KeyList, DB, [])
+    end.
+
+rec_batch_read([H|T], DB, Accumulator) ->
+    case read_ext(rec_is_key_exists(H, DB), DB) of
+        {ok, Value} -> rec_batch_read(T, DB, Accumulator ++ [{H, Value}]);
+        {error, DB} -> {error, DB}
+    end;
+rec_batch_read([], _, Accumulator) -> Accumulator.
 
 match(Value, {_, DB}) when is_list(DB) ->
     rec_get_key(Value, DB, []);
