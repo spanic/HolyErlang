@@ -24,5 +24,6 @@ module)
 
 * **16.10** | Implemented operations with files as a preparation for **ex. 2.0** (see `database` module);
 * **23.10** | Finished **ex. 2.0** with advanced saving DB to file functionality
+* **24.10** | Added new DB format support for **ex. 2.1** (for now it works only with properties parsing & validation, **WIP**)
 
 _Work in progress..._
