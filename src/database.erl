@@ -7,7 +7,7 @@
 -author("Andrei Sadulin").
 
 %% API
--export([new/1, destroy/1, write/3, delete/2, read/2, match/2, 
+-export([new/0, new/1, destroy/1, write/3, delete/2, read/2, match/2,
     commit/1, append/3, batch_delete/2, batch_read/2]).
 
 -define(Path, "../resources/").
@@ -19,23 +19,31 @@
 %% DB = [{key_1, value_1}, {...}, ...]
 %% DB v.2 = {[{append|batch, allow/deny|number}, {...}], [DB]}
 
+new() -> new([]).
+
+new({Property, Value}) -> new([{Property, Value}]);
 new(DBProperties) when is_list(DBProperties) ->
     {rec_check_properties(DBProperties, []), create_or_read_file()};
-new(_) -> throw("DB properties should be a list!").
+new(_) -> ?incorrect_argument_alert.
 
+%% Initial properties assigning
+%% ------------------------------------------------------------
 rec_check_properties([H|T], Accumulator) ->
     {PropertyName, _} = H,
-    Existence = rec_get_property(PropertyName, Accumulator, []),
+    Existence = get_property(PropertyName, Accumulator),
     case Existence of
         null -> rec_check_properties(T, Accumulator ++ [set_property(H)]);
-        _ -> throw(io:format("\"~s\" property should exist only once!~n", [PropertyName]))
+        _ -> throw(io:format("\"~s\" property key should exist only once!~n", [PropertyName]))
     end;
 rec_check_properties([], Accumulator) -> Accumulator.
 
 set_property({append, Value}) when Value =:= allow; Value =:= deny -> {append, Value};
 set_property({batch, Value}) when is_integer(Value), Value >= 0 -> {batch, Value};
-set_property(_) -> throw("Invalid property!").
+set_property(_) -> throw("Invalid properties specification!").
+%% ------------------------------------------------------------
 
+%% Creating new file to store DB entries or reading existing one
+%% ------------------------------------------------------------
 create_or_read_file() ->
     file:make_dir(?Path),
     BaseStream = case get_file_stream([read]) of
@@ -68,7 +76,10 @@ rec_ask_user_yes_no(Message) ->
         {ok, Answer} when Answer =/= yes andalso Answer =/= no -> rec_ask_user_yes_no(Message);
         {ok, YesOrNo} -> YesOrNo
     end.
+%% ------------------------------------------------------------
 
+%% Getting specified property from the list
+%% ------------------------------------------------------------
 get_property(PropertyName, Properties) when is_atom(PropertyName), is_list(Properties) ->
     rec_get_property(PropertyName, Properties, []);
 get_property(_, _) -> throw("Invalid properties specification!").
@@ -81,7 +92,10 @@ rec_get_property(PropertyName, [_|T], Accumulator) ->
     rec_get_property(PropertyName, T, Accumulator);
 rec_get_property(_, [], []) -> null;
 rec_get_property(_, [], Accumulator) -> hd(Accumulator).
+%% ------------------------------------------------------------
 
+%% Basic DB operations
+%% ------------------------------------------------------------
 write(Key, Value, {Properties, DB}) when is_list(DB) ->
     {Properties, write_ext(rec_is_key_exists(Key, DB), {Key, Value}, DB)};
 write(_, _, DB) -> ?incorrect_argument_alert, DB.
@@ -89,18 +103,32 @@ write(_, _, DB) -> ?incorrect_argument_alert, DB.
 write_ext(false, Entry, DB) -> DB ++ [Entry];
 write_ext(_, _, DB) -> io:fwrite("Uniqueness constraint violated!~n"), DB.
 
-append(Key, Value, {Properties, DB}) ->
-    {Properties, append_ext(get_property(append, Properties), Key, Value, DB)}.
-
-append_ext(allow, Key, Value, DB) -> write_ext(rec_is_key_exists(Key, DB), {Key, Value}, DB);
-append_ext(_, _, _, DB) -> io:fwrite("Appending new entries disallowed!"), DB.
-
 delete(Key, {Properties, DB}) when is_list(DB) ->
     {Properties, delete_ext(rec_is_key_exists(Key, DB), DB)};
 delete(_, DB) -> ?incorrect_argument_alert, DB.
 
 delete_ext({true, Entry}, DB) -> DB -- [Entry];
 delete_ext(_, DB) -> io:fwrite("Integrity constraint violated!~n"), DB.
+
+read(Key, {_, DB}) when is_list(DB) ->
+    read_ext(rec_is_key_exists(Key, DB), DB);
+read(_, DB) -> ?incorrect_argument_alert, DB.
+
+read_ext({true, {_, Value}}, _) -> {ok, Value};
+read_ext(_, DB) -> {error, DB}.
+
+match(Value, {_, DB}) when is_list(DB) ->
+    rec_get_key(Value, DB, []);
+match(_, _) -> ?incorrect_argument_alert.
+%% ------------------------------------------------------------
+
+%% Batch DB operations
+%% ------------------------------------------------------------
+append(Key, Value, {Properties, DB}) ->
+    {Properties, append_ext(get_property(append, Properties), Key, Value, DB)}.
+
+append_ext(allow, Key, Value, DB) -> write_ext(rec_is_key_exists(Key, DB), {Key, Value}, DB);
+append_ext(_, _, _, DB) -> io:fwrite("Appending new entries disallowed!"), DB.
 
 batch_delete(KeyList, {Properties, DB}) when is_list(KeyList) ->
     BatchQuantity = get_property(batch, Properties),
@@ -112,13 +140,6 @@ batch_delete(KeyList, {Properties, DB}) when is_list(KeyList) ->
 rec_batch_delete([H|T], DB) ->
     rec_batch_delete(T, delete_ext(rec_is_key_exists(H, DB), DB));
 rec_batch_delete([], DB) -> DB.
-
-read(Key, {_, DB}) when is_list(DB) ->
-    read_ext(rec_is_key_exists(Key, DB), DB);
-read(_, DB) -> ?incorrect_argument_alert, DB.
-
-read_ext({true, {_, Value}}, _) -> {ok, Value};
-read_ext(_, DB) -> {error, DB}.
 
 batch_read(KeyList, {Properties, DB}) when is_list(KeyList) ->
     BatchQuantity = get_property(batch, Properties),
@@ -133,23 +154,22 @@ rec_batch_read([H|T], DB, Accumulator) ->
         {error, DB} -> {error, DB}
     end;
 rec_batch_read([], _, Accumulator) -> Accumulator.
+%% ------------------------------------------------------------
 
-match(Value, {_, DB}) when is_list(DB) ->
-    rec_get_key(Value, DB, []);
-match(_, _) -> ?incorrect_argument_alert.
-
+%% Utilities to get value by the specified key or to check its existence in DB
+%% ------------------------------------------------------------
 rec_get_key(Value, [{Key, Value}|T], Accumulator) ->
     rec_get_key(Value, T, Accumulator ++ [Key]);
 rec_get_key(Value, [_|T], Accumulator) -> rec_get_key(Value, T, Accumulator);
 rec_get_key(_, [], Accumulator) -> Accumulator.
 
-rec_is_key_exists(NewKey, [{Key, Value}|T]) ->
-    case NewKey =:= Key of 
-        true -> {true, {Key, Value}};
-        false -> rec_is_key_exists(NewKey, T)
-    end;
+rec_is_key_exists(Key, [{Key, Value}|_]) -> {true, {Key, Value}};
+rec_is_key_exists(NewKey, [{Key, _}|T]) -> rec_is_key_exists(NewKey, T);
 rec_is_key_exists(_, []) -> false.
+%% ------------------------------------------------------------
 
+%% Writing current DB state into the file and optionally destroying it
+%% ------------------------------------------------------------
 commit({_, DB}) when is_list(DB) ->
     rec_add_line(get_file_stream([write]), DB);
 commit(_) -> ?incorrect_argument_alert.
@@ -164,3 +184,4 @@ destroy(DB) when is_tuple(DB) ->
         no -> io:fwrite("God bless your database!~n"), DB
     end;
 destroy(_) -> ?incorrect_argument_alert.
+%% ------------------------------------------------------------
