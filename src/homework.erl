@@ -9,7 +9,7 @@
 %% API
 -export([cartesian/2, flatten/1, get_tags/1, get_tuples/1, validate_areas/2, serialize_shapes/1, deserialize_shapes/1,
     create/1, reverse_create/1, print_list/1, print_odd_list/1, filter_elements/2, reverse/1, concatenate/1,
-    complimentary/1, cut_sequence/2]).
+    complimentary/1, cut_sequence/2, init_lazy_list/1, lazy_map/2, lazy_foldl/3, lazy_filter/2, lazy_concat/2]).
 
 -define(incorrect_argument_alert(), io:fwrite("Incorrect argument(s)!~n")).
 
@@ -177,3 +177,34 @@ rec_compare_sequence([H1|T1], [H2|T2]) ->
     end;
 rec_compare_sequence([], [_|_]) -> false;
 rec_compare_sequence(_, []) -> true.
+
+%% Lazy List definition: LazyList = [1|fun() -> [2|fun() -> ... end] end].
+%% -define(EXPAND(Tail), if is_function(Tail, 0) -> Tail(); true -> Tail end).
+
+init_lazy_list(LazyList) when is_function(tl(LazyList), 0) -> LazyList;
+init_lazy_list([H|T]) -> [H|fun() -> init_lazy_list(T) end];
+init_lazy_list([]) -> [].
+
+lazy_map(Func, List) when is_function(Func, 1), is_list(List) ->
+    rec_lazy_map(Func, init_lazy_list(List), []);
+lazy_map(_, _) -> ?incorrect_argument_alert().
+
+rec_lazy_map(Func, [H|T], Accumulator) ->
+    rec_lazy_map(Func, T(), Accumulator ++ [Func(H)]);
+rec_lazy_map(_, [], Accumulator) -> Accumulator.
+
+lazy_foldl(Func, Accumulator, List) when is_function(Func, 2), is_list(List) ->
+    rec_lazy_foldl(Func, Accumulator, init_lazy_list(List));
+lazy_foldl(_, _, _) -> ?incorrect_argument_alert().
+
+rec_lazy_foldl(Func, Accumulator, [H|T]) ->
+    rec_lazy_foldl(Func, Func(H, Accumulator), T());
+rec_lazy_foldl(_, Accumulator, []) -> Accumulator.
+
+lazy_filter(Func, List) when is_function(Func, 1), is_list(List) ->
+    rec_lazy_filter(Func, init_lazy_list(List), []);
+lazy_filter(_, _) -> ?incorrect_argument_alert().
+
+rec_lazy_filter(Func, [H|T], Accumulator) ->
+    rec_lazy_filter(Func, T(), case Func(H) of true -> Accumulator ++ [H]; false -> Accumulator end);
+rec_lazy_filter(_, [], Accumulator) -> Accumulator.
