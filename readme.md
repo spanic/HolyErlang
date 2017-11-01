@@ -28,6 +28,8 @@ module)
 **Finished DB properties support** implementation, **added new batch methods** & verification of append possibility (
 see `append/3`, `batch_delete/2` and `batch_read/2` in `database` module);
 * **30.10** | Added **lazy lists** converter and simple mapping & filtering lazy operations for **ex. 2.5.1** 
-(see `homework` module)
+(see `homework` module);
+* **01.10** | Implemented **lazy lists concatenation** in two different ways (`lazy_concat/2`, `s_lazy_concat/2`) 
+and **LL unwrapping** (used for solution testing)
 
 _Work in progress..._
