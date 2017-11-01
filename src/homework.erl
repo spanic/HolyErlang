@@ -9,7 +9,8 @@
 %% API
 -export([cartesian/2, flatten/1, get_tags/1, get_tuples/1, validate_areas/2, serialize_shapes/1, deserialize_shapes/1,
     create/1, reverse_create/1, print_list/1, print_odd_list/1, filter_elements/2, reverse/1, concatenate/1,
-    complimentary/1, cut_sequence/2, init_lazy_list/1, lazy_map/2, lazy_foldl/3, lazy_filter/2, lazy_concat/2]).
+    complimentary/1, cut_sequence/2, init_lazy_list/1, lazy_map/2, lazy_foldl/3, lazy_filter/2, lazy_concat/2,
+    unwrap_lazy_list/2, s_lazy_concat/2]).
 
 -define(incorrect_argument_alert(), io:fwrite("Incorrect argument(s)!~n")).
 
@@ -178,6 +179,10 @@ rec_compare_sequence([H1|T1], [H2|T2]) ->
 rec_compare_sequence([], [_|_]) -> false;
 rec_compare_sequence(_, []) -> true.
 
+%% ----------------------------
+%% Lazy Lists operations
+%% ----------------------------
+
 %% Lazy List definition: LazyList = [1|fun() -> [2|fun() -> ... end] end].
 %% -define(EXPAND(Tail), if is_function(Tail, 0) -> Tail(); true -> Tail end).
 
@@ -208,3 +213,19 @@ lazy_filter(_, _) -> ?incorrect_argument_alert().
 rec_lazy_filter(Func, [H|T], Accumulator) ->
     rec_lazy_filter(Func, T(), case Func(H) of true -> Accumulator ++ [H]; false -> Accumulator end);
 rec_lazy_filter(_, [], Accumulator) -> Accumulator.
+
+lazy_concat(FirstLLFunction, SecondLLFunction) ->
+    fun() ->
+        case FirstLLFunction() of [] -> SecondLLFunction(); [H|T] -> [H|lazy_concat(T, SecondLLFunction)] end
+    end.
+
+s_lazy_concat([H|T], SecondLL) ->
+    [H|fun() ->
+        case T() of [] -> SecondLL; InnerLL -> s_lazy_concat(InnerLL, SecondLL) end
+    end].
+
+unwrap_lazy_list([H|T], Accumulator) ->
+    %% io:fwrite("~p~n", [T()]),
+    unwrap_lazy_list(T(), Accumulator ++ [H]);
+unwrap_lazy_list([], Accumulator) -> Accumulator;
+unwrap_lazy_list(_, _) -> ?incorrect_argument_alert().
