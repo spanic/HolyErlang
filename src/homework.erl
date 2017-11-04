@@ -10,7 +10,7 @@
 -export([cartesian/2, flatten/1, get_tags/1, get_tuples/1, validate_areas/2, serialize_shapes/1, deserialize_shapes/1,
     create/1, reverse_create/1, print_list/1, print_odd_list/1, filter_elements/2, reverse/1, concatenate/1,
     complimentary/1, cut_sequence/2, init_lazy_list/1, lazy_map/2, lazy_foldl/3, lazy_filter/2, lazy_concat/2,
-    unwrap_lazy_list/2, s_lazy_concat/2]).
+    unwrap_lazy_list/2, s_lazy_concat/2, lazy_read/0, lazy_read/1]).
 
 -define(incorrect_argument_alert(), io:fwrite("Incorrect argument(s)!~n")).
 
@@ -229,3 +229,21 @@ unwrap_lazy_list([H|T], Accumulator) ->
     unwrap_lazy_list(T(), Accumulator ++ [H]);
 unwrap_lazy_list([], Accumulator) -> Accumulator;
 unwrap_lazy_list(_, _) -> ?incorrect_argument_alert().
+
+%% lazy_read(Path) -> fun() -> [Nth string | get_next()] end.
+lazy_read() ->
+    lazy_read("../resources/strings.txt").
+lazy_read(Path) when is_list(Path) ->
+    Stream = case file:open(Path, [read, {encoding, utf8}]) of
+        {error, Reason} -> throw("Error: " ++ Reason);
+        {ok, DataProvider} -> DataProvider
+    end,
+    lazy_get_lines(Stream);
+lazy_read(_) -> ?incorrect_argument_alert().
+
+lazy_get_lines(Stream) ->
+    fun() -> lazy_read_continue_ext(Stream, file:read_line(Stream)) end.
+
+lazy_read_continue_ext(Stream, {ok, Data}) -> [Data|lazy_get_lines(Stream)];
+lazy_read_continue_ext(_, {error, Reason}) -> throw("Error: " ++ Reason);
+lazy_read_continue_ext(_, eof) -> io:fwrite("Done!~n").

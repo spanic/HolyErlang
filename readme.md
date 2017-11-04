@@ -30,6 +30,11 @@ see `append/3`, `batch_delete/2` and `batch_read/2` in `database` module);
 * **30.10** | Added **lazy lists** converter and simple mapping & filtering lazy operations for **ex. 2.5.1** 
 (see `homework` module);
 * **01.10** | Implemented **lazy lists concatenation** in two different ways (`lazy_concat/2`, `s_lazy_concat/2`) 
-and **LL unwrapping** (used for solution testing)
+and **LL unwrapping** (used for solution testing);
+* **04.11** | Added **LL-based reading from file** (`../resources/strings.txt` by default, but you can specify the path 
+by yourself via `lazy_read/1`) as a part of **ex. 2.5.1**. Try to call `Test = homework:lazy_read(). Test().` to see 
+how it works
+
+### Task №5 (since 17.10) – Actors model 
 
 _Work in progress..._
