@@ -35,6 +35,9 @@ and **LL unwrapping** (used for solution testing);
 by yourself via `lazy_read/1`) as a part of **ex. 2.5.1**. Try to call `Test = homework:lazy_read(). Test().` to see 
 how it works
 
-### Task №5 (since 17.10) – Actors model 
+### Task №5 (since 17.10) – Actors model
+
+* **06.11** | Implemented **"Not" logical element** based on the @bitgorbovsky's `gen_proc` and `wire` modules, see 
+`circuits\le_not.erl` file, added unit tests
 
 _Work in progress..._
